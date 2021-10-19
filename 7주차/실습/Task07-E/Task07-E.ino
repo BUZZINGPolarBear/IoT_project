@@ -62,29 +62,6 @@ int music_pair_index = 3;
 int is_music_saved=false;
 bool is_music_played=false;
 
-String printLocalTime()
-{
-  struct tm timeinfo;
-  String nowTime = ""; 
-  if (!getLocalTime(&timeinfo))
-  {
-    Serial.println("Failed to obtain time");
-    return "시간을 불러올 수 없음.";
-  }
-  //Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  //Serial.println("Year: " + String(timeinfo.tm_year + 1900) + ", Month: " + String(timeinfo.tm_mon + 1));
-  nowTime += ("Year:" + String(timeinfo.tm_year+ 1900) + " Month:" + String(timeinfo.tm_mon + 1));
-  nowTime += (" Day: " + String(timeinfo.tm_mday)+ "  " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec) + "\n");
-  //Serial.println(nowTime);
-  //client.println("<textarea class=\"textarea has-fixed-size\" rows=\"1\" style=\"text-align: center;\">");
-  //client.println(String(timeinfo.tm_year + 1900) + "년 " + String(timeinfo.tm_mon + 1) + "월" + %A + " " + %H + "시 " + %M + "분 " + %S +"초"); 
-  //client.println("</textarea>");
-  
-  
-  //client.println("</textarea>");
-  return nowTime;
-}
-
 void playNote(char note, int dur)
 {
   int temp;
@@ -110,6 +87,48 @@ void playNote(char note, int dur)
   ledcWrite(ledChannel, duty);
   delay(dur);
 }
+
+String printLocalTime()
+{
+  struct tm timeinfo;
+  String nowTime = ""; 
+  if (!getLocalTime(&timeinfo))
+  {
+    Serial.println("Failed to obtain time");
+    return "시간을 불러올 수 없음.";
+  }
+  //Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  //Serial.println("Year: " + String(timeinfo.tm_year + 1900) + ", Month: " + String(timeinfo.tm_mon + 1));
+  nowTime += ("Year:" + String(timeinfo.tm_year+ 1900) + " Month:" + String(timeinfo.tm_mon + 1));
+  nowTime += (" Day: " + String(timeinfo.tm_mday)+ "  " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec) + "\n");
+  if(String(timeinfo.tm_hour) == getHour && String(timeinfo.tm_min) == getMin)
+  {
+    Serial.println("#######Saved Note is Playing.....#######");
+    music_cnt = 40;
+    
+    for(int i=3; i<EEPROM.read(2); i += 2)
+    {
+      sVal = EEPROM.read(i);
+      sDel = EEPROM.read(i+1);
+      Serial.println("-----------");
+      Serial.println("Got " + String(sVal+'0'-0x30) + " AND " + String(sDel+'0'-0x30));
+      playNote(sVal+'0', nDelay[sDel+'0'-0x30]);
+    }
+    playNote('z', 20000);
+    EEPROM.write(0,0xAB);
+    EEPROM.commit();
+    is_music_played=true;
+  }
+  //Serial.println(nowTime);
+  //client.println("<textarea class=\"textarea has-fixed-size\" rows=\"1\" style=\"text-align: center;\">");
+  //client.println(String(timeinfo.tm_year + 1900) + "년 " + String(timeinfo.tm_mon + 1) + "월" + %A + " " + %H + "시 " + %M + "분 " + %S +"초"); 
+  //client.println("</textarea>");
+  
+  
+  //client.println("</textarea>");
+  return nowTime;
+}
+
 
 void setup()
 {
@@ -189,7 +208,7 @@ void loop()
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
-            //client.println("Refresh: 1\r");
+            client.println("Refresh: 30\r");
             client.println();
             // turns the GPIOs on and off
             if (header.indexOf("GET /16/on") >= 0)
@@ -219,6 +238,7 @@ void loop()
             
             if (header.indexOf("GET /get?hour=") >= 0)
             {
+              music_pair_index = 3;
               getHour = header.substring(header.indexOf("/get?hour=")+10, header.indexOf("/get?hour=")+12);
               Serial.println("Got Hour: " + getHour);
               getMin = header.substring(header.indexOf("&minute=")+8, header.indexOf("&minute=")+10);
@@ -228,7 +248,7 @@ void loop()
               getMusic.toCharArray(toChar, str_len);
               
               Serial.println("Saving Notes.....");
-              for(int i=1; i<getMusic.length()-2; i+=2)
+              for(int i=0; i<getMusic.length()-2; i+=2)
               {
                 EEPROM.write(music_pair_index++, byte(toChar[i]-'0'));
                 Serial.println("Saved At: " + String(music_pair_index) + " Which is: " + EEPROM.read(music_pair_index-1));
