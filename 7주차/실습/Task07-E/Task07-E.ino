@@ -1,3 +1,7 @@
+#include <EEPROM.h>
+// define the number of bytes you want to access
+#define EEPROM_SIZE 80
+
 // IoT07-1 ESP32 WebServer
 #define SWAP 0 // sw access point
 #include <string>
@@ -40,7 +44,24 @@ String hourZeroToTwelve = "<label class=\"label\">Hour</label><div class=\"selec
 String minuteZeroToSixty = "<label class=\"label\">Minute</label><div class=\"select\"> <select name=\"minute\"> <option>00</option> <option>01</option> <option>02</option> <option>03</option> <option>04</option> <option>05</option> <option>06</option> <option>07</option> <option>08</option> <option>09</option> <option>10</option> <option>11</option> <option>12</option> <option>13</option> <option>14</option> <option>15</option> <option>16</option> <option>17</option> <option>18</option> <option>19</option> <option>20</option> <option>21</option> <option>22</option> <option>23</option> <option>24</option> <option>25</option> <option>26</option> <option>27</option> <option>28</option> <option>29</option> <option>30</option> <option>31</option> <option>32</option> <option>33</option> <option>34</option> <option>35</option> <option>36</option> <option>37</option> <option>38</option> <option>39</option> <option>40</option> <option>41</option> <option>42</option> <option>43</option> <option>44</option> <option>45</option> <option>46</option> <option>47</option> <option>48</option> <option>49</option> <option>50</option> <option>51</option> <option>52</option> <option>53</option> <option>54</option> <option>55</option> <option>56</option> <option>57</option> <option>58</option> <option>59</option> </select> </div>";
 String getHour = "";
 String getMin = "";
-String getMusic = "";
+String getMusic = "04060604044476764404767644767644040404";
+
+const int ledChannel = 0;
+const int resolution = 8;
+const int buzPin = 23;
+const int buttonPin = 15;
+const int duty = 18;
+
+byte sVal, sDel;
+const int nFrq[]={262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466,  494, 0, 523};
+const int nDelay[]={2000, 1500, 1000, 750, 500, 375, 250};
+int str_len;
+char toChar[1000];
+int music_cnt=0;
+int music_pair_index = 3;
+int is_music_saved=false;
+bool is_music_played=false;
+
 String printLocalTime()
 {
   struct tm timeinfo;
@@ -62,6 +83,32 @@ String printLocalTime()
   
   //client.println("</textarea>");
   return nowTime;
+}
+
+void playNote(char note, int dur)
+{
+  int temp;
+  if(note == 'c')
+  {
+    
+    ledcSetup(ledChannel, 523, resolution);
+    ledcWrite(ledChannel, duty);
+    delay(dur);
+    return;
+  }
+  else if(note == 'z')
+  {
+    ledcSetup(ledChannel, 0, resolution);
+    delay(dur);
+    return;
+  }
+  else temp = note-0x30;
+
+  Serial.println(String(note) +" "+ String(dur));
+  Serial.println("nFrq= " + String(nFrq[temp]) + ",Del= " + String(dur));
+  ledcSetup(ledChannel, nFrq[temp], resolution);
+  ledcWrite(ledChannel, duty);
+  delay(dur);
 }
 
 void setup()
@@ -102,6 +149,14 @@ void setup()
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 #endif
   server.begin();
+
+  ledcAttachPin(buzPin, ledChannel);
+  pinMode(buttonPin, INPUT);  
+  // initialize EEPROM with predefined size
+  EEPROM.begin(EEPROM_SIZE);
+  pinMode(buttonPin, INPUT);
+  if(EEPROM.read(0) == 0xAC) is_music_saved = true;
+  EEPROM.commit();
 }
 
 void loop()
@@ -168,9 +223,26 @@ void loop()
               Serial.println("Got Hour: " + getHour);
               getMin = header.substring(header.indexOf("&minute=")+8, header.indexOf("&minute=")+10);
               Serial.println("Got Min: " + getMin);
-              getMusic = header.substring(header.indexOf("&music=")+7, header.indexOf(" H")-2);
-              Serial.println("Got Music: " + getMusic);
+
+              str_len = getMusic.length();
+              getMusic.toCharArray(toChar, str_len);
+              
+              Serial.println("Saving Notes.....");
+              for(int i=1; i<getMusic.length()-2; i+=2)
+              {
+                EEPROM.write(music_pair_index++, byte(toChar[i]-'0'));
+                Serial.println("Saved At: " + String(music_pair_index) + " Which is: " + EEPROM.read(music_pair_index-1));
+                EEPROM.write(music_pair_index++, byte(toChar[i+1]-'0'));
+                Serial.println("Saved At: " + String(music_pair_index) + " Which is: " + EEPROM.read(music_pair_index-1));
+                EEPROM.commit();
+              }
+              EEPROM.write(2, str_len-2);
+              Serial.println("문자열 길이: " + str_len-2); 
+              EEPROM.write(0, 0xAC);
+              EEPROM.commit();
+              Serial.println("Music Saved.");
             }
+           
 
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
@@ -198,14 +270,13 @@ void loop()
             }
             client.println("</textarea>");
 
-            client.println("</br>Set Alarm");
+            client.println("</br><h2>Set Alarm</h2>");
             client.println("<p>");
             client.println("<form action=\"/get\">");
         
             client.println(hourZeroToTwelve);
             client.println(minuteZeroToSixty);
-            client.println("<label class=\"label\">Set music</label>");
-            client.println("<textarea name=\"music\" id=\"story\" name=\"story\" rows=\"5\" cols=\"33\">04060604044476764404767644767644040404</textarea><br><input type=\"submit\" value=\"Submit\">");
+            client.println("<br><input type=\"submit\" value=\"Submit\">");
             client.println("</form><div class=\"control\"></div></p>");
 
             // Display current state, and ON/OFF buttons for GPIO 16
