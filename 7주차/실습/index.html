@@ -32,18 +32,24 @@
 
 <body>
     <h1>ESP32 Web Server</h1>
-    <textarea class="textarea has-fixed-size" rows="1" style="text-align: center;">Year:2021 Month:10 Day: 19  11:12:16
-    
-    </textarea>
+    <textarea class="textarea has-fixed-size" rows="1" style="text-align: center;">Year:2021 Month:10 Day: 19  11:12:16  </textarea>
     <br>Set Alarm
     <p>
     </p>
     <form action="/get">
-        <label class="label"><input name="hour" class="input" type="text" style="width: 50px;">Hour<input name="min"
-                class="input" type="text" style="width: 50px;">Minute</label>
+        <div class="select">
+            <select>
+              <option>AM</option>
+              <option>PM</option>
+            </select>
+          </div>
+        <label class="label">
+            <input name="hour" class="input" type="text" style="width: 50px;">Hour
+            <input name="min"class="input" type="text" style="width: 50px;">Minute
+        </label>
         <label class="label">Set music</label>
-        <textarea name="music" id="story" rows="5" cols="33">04060604044476764404767644767644040404</textarea><br><input
-            type="submit" value="Submit">
+        <textarea name="music" id="story" rows="5" cols="33">04060604044476764404767644767644040404</textarea>
+        <br><input type="submit" value="Submit">
     </form>
     <div class="control"></div>
     <p></p>
