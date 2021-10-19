@@ -104,7 +104,6 @@ String printLocalTime()
   if(String(timeinfo.tm_hour) == getHour && String(timeinfo.tm_min) == getMin)
   {
     Serial.println("#######Saved Note is Playing.....#######");
-    music_cnt = 40;
     
     for(int i=3; i<EEPROM.read(2); i += 2)
     {
