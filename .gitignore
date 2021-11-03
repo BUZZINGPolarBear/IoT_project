@@ -2,3 +2,13 @@
 *.mp4
 *.zip
 Adafruit_BME280_Library-master/
+*.crt
+*.key
+*.pem
+*.lic
+Hornbil-Examples-master/
+/Hornbill-Examples-master/
+*.c
+config.c++
+*.txt
+*.docx
